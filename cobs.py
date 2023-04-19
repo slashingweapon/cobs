@@ -10,14 +10,15 @@ def decode(cobsbuf, delim=0):
 
 """All tests will fail until implementation is done."""
 class testCobs(unittest.TestCase):
-    staticCases = [
+    goodShortCases = [
        ( bytes.fromhex("00 aa 00"), bytes.fromhex("01 02 aa 00") ),
        ( bytes.fromhex("aa bb 00"), bytes.fromhex("03 aa bb 00") )
     ]
 
-    def testStatic(self):
-        for (plainbuf, cobsbuf) in self.staticCases:
-            self.assertEqual(encode(plainbuf), decode(cobsbuf))
+    def testShort(self):
+        for (plainbuf, cobsbuf) in self.goodShortCases:
+            self.assertEqual(encode(plainbuf), cobsbuf)
+            self.assertEqual(decode(cobsbuf), plainbuf)
 
 if __name__ == '__main__':
-    print("This is hell\n")
+    print("try: python3 -m unittest cobs.py")
