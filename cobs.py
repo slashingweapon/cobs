@@ -21,18 +21,25 @@ a high degree of consistency.
 
 """Encode the given bytes-like object with COBS
 
-    Does not add the terminating bytes.
+    Adds a terminating byte.
 """
 def encode(rawbuf, delim=0):
     outbuf = bytearray()
+    maxblock = 254
+    delimBytes = delim.to_bytes(1, signed=False)
 
     if len(rawbuf) > 0:
-        blocks = rawbuf.split(delim.to_bytes(1, signed=False))
+        blocks = rawbuf.split(delimBytes)
         for oneBlock in blocks:
-            outbuf.append(len(oneBlock)+1)
-            outbuf.extend(oneBlock)
+            pointer = 0
+            while pointer + maxblock <= len(oneBlock):
+                outbuf.append(255)
+                outbuf.extend(oneBlock[pointer:pointer+maxblock])
+                pointer += maxblock
+            outbuf.append(len(oneBlock)-pointer+1)
+            outbuf.extend(oneBlock[pointer:])
 
-    outbuf.append(0)
+    outbuf.append(delim)
     return outbuf
 
 def decode(cobsbuf, delim=0):
@@ -54,6 +61,27 @@ class testCobs(unittest.TestCase):
         for (plainbuf, cobsbuf) in self.goodCasesZero:
             self.assertEqual(encode(plainbuf), cobsbuf)
             #self.assertEqual(decode(cobsbuf), plainbuf)
+    
+    longCases = [
+        ( bytes.fromhex("""0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF"""),
+          bytes.fromhex("""FF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789AB
+                         43 CDEF 
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+                         00""")
+        )
+    ]
+    def testLong(self):
+        for (plainbuf, cobsbuf) in self.longCases:
+            self.assertEqual(encode(plainbuf), cobsbuf)
+            #self.assertEqual(decode(cobsbuf), plainbuf)
+
 
 if __name__ == '__main__':
     print("try: python3 -m unittest cobs.py")
