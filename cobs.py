@@ -37,12 +37,13 @@ def encode(rawbuf, delim=0):
                 outbuf.append(255)
                 outbuf.extend(oneBlock[pos:pos+maxblock])
                 pos += maxblock
-            outbuf.append(len(oneBlock)-pos+1)
-            outbuf.extend(oneBlock[pos:])
+            if (pos == 0) or (pos < len(oneBlock)):
+                outbuf.append(len(oneBlock)-pos+1)
+                outbuf.extend(oneBlock[pos:])
 
     return outbuf
 
-""" Decode a COBS frome to the original data.
+""" Decode a COBS frame to the original data.
 
     Decodes the COBS data until until the end of the input is reached, or
     the delimiter is encountered.  If the delimiter is present in the input
@@ -90,45 +91,72 @@ def decode(cobsbuf, delim=0):
 """All tests will fail until implementation is done."""
 class testCobs(unittest.TestCase):
     goodCasesZero = [
-        ( bytes.fromhex(""), bytes.fromhex("") ),
-        ( bytes.fromhex("00"), bytes.fromhex("01 01") ),
-        ( bytes.fromhex("00 00"), bytes.fromhex("01 01 01") ),
-        ( bytes.fromhex("00 11 00"), bytes.fromhex("01 02 11 01") ),
-        ( bytes.fromhex("11 22 00 33"), bytes.fromhex("03 11 22 02 33") ),
-        ( bytes.fromhex("11 22 33 44"), bytes.fromhex("05 11 22 33 44") ),
-        ( bytes.fromhex("11 00 00 00"), bytes.fromhex("02 11 01 01 01") ),
+        ( "empty",              bytes.fromhex(""), bytes.fromhex("") ),
+        ( "a zero",             bytes.fromhex("00"), bytes.fromhex("01 01") ),
+        ( "two zeroes",         bytes.fromhex("00 00"), bytes.fromhex("01 01 01") ),
+        ( "sandwich zeroes",    bytes.fromhex("00 11 00"), bytes.fromhex("01 02 11 01") ),
+        ( "embedded zero",      bytes.fromhex("11 22 00 33"), bytes.fromhex("03 11 22 02 33") ),
+        ( "no zeroes",          bytes.fromhex("11 22 33 44"), bytes.fromhex("05 11 22 33 44") ),
+        ( "trailing zeroes",    bytes.fromhex("11 00 00 00"), bytes.fromhex("02 11 01 01 01") ),
     ]
 
     def testShort(self):
-        for (plainbuf, cobsbuf) in self.goodCasesZero:
-            self.assertEqual(encode(plainbuf), cobsbuf)
-            (bytesEaten, decodedBytes) = decode(cobsbuf)
-            self.assertEqual(bytesEaten, len(cobsbuf))
-            self.assertEqual(decodedBytes, cobsbuf)
+        for (name, plainbuf, cobsbuf) in self.goodCasesZero:
+            with self.subTest(name=name):
+                self.assertEqual(encode(plainbuf), cobsbuf)
+                (bytesEaten, decodedBytes) = decode(cobsbuf)
+                self.assertEqual(bytesEaten, len(cobsbuf))
+                self.assertEqual(decodedBytes, cobsbuf)
     
     longCases = [
-        ( bytes.fromhex("""0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
+        ( "long 320",
+          bytes.fromhex("""0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
-                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF"""),
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF """),
           bytes.fromhex("""FF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
                          0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789AB
                          43 CDEF 
-                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
-                         """)
-        )
+                         0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF """),
+        ),
+        ( "long 254",
+          bytes(b"""This is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful.."""),
+          bytes(b"""\xffThis is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful...
+This is a string that is sixty four bytes long and is useful.."""),
+        ),
     ]
 
     def testLong(self):
-        for (plainbuf, cobsbuf) in self.longCases:
-            self.assertEqual(encode(plainbuf), cobsbuf)
-            (bytesEaten, decodedBytes) = decode(cobsbuf)
-            self.assertEqual(bytesEaten, len(cobsbuf))
-            self.assertEqual(decodedBytes, cobsbuf)
+        for (name, plainbuf, cobsbuf) in self.longCases:
+            with self.subTest(name=name):
+                # The unused variables here are intentional, for use with
+                # the --local flag.
+                plainLen = len(plainbuf)
+                cobsLen = len(cobsbuf)
+                encodedBytes = encode(plainbuf)
+                encodedLen = len(encodedBytes)
+                self.assertEqual(encodedBytes, cobsbuf)
+                (decodedLen, decodedBytes) = decode(cobsbuf)
+                self.assertEqual(decodedLen, len(cobsbuf))
+                self.assertEqual(decodedBytes, cobsbuf)
 
+    errorCases = [
+        ("short block", bytes.fromhex("0A 11223344 55667788")),
+        ("delim in block", bytes.fromhex("09 01020304 00060708")),
+    ]
+    def testDecodeErrors(self):
+        for (name, cobsbuf) in self.errorCases:
+            with self.subTest(name=name):
+                with self.assertRaises(ValueError):
+                    (decodedLen, decodedBytes) = decode(cobsbuf)
 
 if __name__ == '__main__':
     print("try: python3 -m unittest cobs.py")
