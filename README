@@ -1,0 +1,15 @@
+# COBS Implementation
+
+## Background
+
+## Installation
+
+## Uses
+
+## Testing
+
+To run the unit test from the repo root:
+
+    PYTHONPATH=`pwd`/src python3 -m unittest tests/test_cobs.py
+
+This should allow the unittest to find and load the cobs module without issue.
