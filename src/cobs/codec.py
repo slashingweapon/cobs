@@ -1,23 +1,5 @@
 #!/usr/bin/env python3 
 
-""" COBS Encoder and Decoder
-
-Consistent Overhead Byte Stuffing is a way to frame binary serial data.  
-The advantage of COBS is that the worst use case adds floor(n/254) bytes
-to the transmitted data.  By contrast, some other framing (like HDLC) have
-substatially worse worst-case scenarios.
-
-Paper:     http://www.stuartcheshire.org/papers/COBSforToN.pdf
-Wikipedia: https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing
-
-For examples, see 'goodCasesZero' in the unit test.
-
-The first implementations will be intentionally simple.  Once they're working,
-I want to test the effect of using different techniques on both CPU and memory 
-overhead.  The overall goal should be to achieve reasonable performce with 
-a high degree of consistency.
-"""
-
 """ Encode the given bytes-like object with COBS
 
     Does not add terminating byte.
