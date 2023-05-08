@@ -40,7 +40,8 @@ def decode(cobsbuf, delim=0):
     pos = 0
 
     while pos < len(cobsbuf):
-        # Add a delimiter between blocks
+        # Add a delimiter between blocks, except on the first block
+        # and when a max-sized block is encountered.
         if not firstBlock:
             outbuf.append(delim)
         else:
@@ -50,22 +51,20 @@ def decode(cobsbuf, delim=0):
         # Carve out the next slice and append it to the output,
         # but check a few things first.
 
-        # Check for end of frame
-        if blockSize == delim:
-            pos += 1
-            break
         # Check for invalid block size.  This can happen when the delimiter value is not 0
         # Check that our next block isn't bigger than the remaining buffer
-        elif (blockSize == 0) or (pos + blockSize - 1 >= len(cobsbuf)):
+        if (blockSize == 0) or (pos + blockSize - 1 >= len(cobsbuf)):
             raise ValueError("Invalid COBS block size")
         # Make our slice, and add it nice
         else:
-            block = cobsbuf[pos:pos+blockSize-1]
+            block = cobsbuf[pos+1:pos+blockSize]
             if block.find(delim) == -1:
                 outbuf.extend(block)
                 pos += blockSize
+                if blockSize == 255:
+                    firstBlock = True # suppress the delimiter when max-sized block is encountered
             else:
                 raise ValueError("Delimiter found in COBS block")
     
-    return (pos, cobsbuf)
+    return (pos, outbuf)
 

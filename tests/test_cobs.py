@@ -20,8 +20,8 @@ class testCobs(unittest.TestCase):
                 self.assertEqual(codec.encode(plainbuf), cobsbuf)
                 (bytesEaten, decodedBytes) = codec.decode(cobsbuf)
                 self.assertEqual(bytesEaten, len(cobsbuf))
-                self.assertEqual(decodedBytes, cobsbuf)
-    
+                self.assertEqual(decodedBytes, plainbuf)
+
     longCases = [
         ( "long 320",
           bytes.fromhex("""0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 0123456789ABCDEF 
@@ -59,8 +59,8 @@ This is a string that is sixty four bytes long and is useful.."""),
                 encodedLen = len(encodedBytes)
                 self.assertEqual(encodedBytes, cobsbuf)
                 (decodedLen, decodedBytes) = codec.decode(cobsbuf)
-                self.assertEqual(decodedLen, len(cobsbuf))
-                self.assertEqual(decodedBytes, cobsbuf)
+                self.assertEqual(decodedLen, cobsLen)
+                self.assertEqual(decodedBytes, plainbuf)
 
     errorCases = [
         ("short block", bytes.fromhex("0A 11223344 55667788")),
@@ -71,6 +71,3 @@ This is a string that is sixty four bytes long and is useful.."""),
             with self.subTest(name=name):
                 with self.assertRaises(ValueError):
                     (decodedLen, decodedBytes) = codec.decode(cobsbuf)
-
-if __name__ == '__main__':
-    print("try: python3 -m unittest test_cobs.py")
